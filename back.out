@@ -1,0 +1,5 @@
+No changes detected
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, cv_models, datasets, sessions, tasks, users
+Running migrations:
+  No migrations to apply.
