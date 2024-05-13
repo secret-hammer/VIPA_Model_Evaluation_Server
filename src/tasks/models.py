@@ -2,28 +2,9 @@ import os
 
 from django.db import models
 
-from cv_models.models import Metric, Task, Architecture, Environment, Perspective, Aspect
+from cv_models.models import Metric, Task, Architecture, Environment, Perspective, Aspect, Parameter
 from datasets.models import Dataset
 from users.models import User
-
-
-# intermediate tables
-class Parameter(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    def generate_path(self, filename):
-        # 根据实例和文件名生成动态路径
-        if filename and '.' in filename:
-            suffix = filename.rsplit(".", 1)[1]
-        unique_filename = f'{self.id}.{suffix}'
-        url = f'{self.user.id}/{self.__class__.__name__}/{unique_filename}'
-        # 判断存储路径中是否存在文件
-        if os.path.exists(os.path.join('media', url)):
-            # 删除存储路径中的文件
-            os.remove(os.path.join('media', url))
-        return url
-
-    file = models.FileField(upload_to=generate_path, blank=True, null=True)
 
 
 class ModelInstance(models.Model):

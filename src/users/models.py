@@ -12,7 +12,6 @@ class User(AbstractUser):
     homepage_link = models.URLField(blank=True, null=True)
     email = models.EmailField(
         max_length=254,
-        unique=True,
         validators=[EmailValidator()],
     )
 

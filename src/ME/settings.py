@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-wwt6rr1vkr)aijw&5f=pwmx5n(-5mw^*x+6##)(ric$@0h5!u-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['10.214.242.156']
 
 # Application definition
 
@@ -93,17 +93,23 @@ WSGI_APPLICATION = 'ME.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# sqlite3 配置
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite',
-        # 'OPTIONS': {'charset': 'utf8mb4', }
-        # 'ENGINE': 'django.db.backends.mysql',  #更改为mysql
-        # 'NAME': 'model',  #testsql数据库名
-        # 'USER': 'root',      #数据库的用户名
-        # 'PASSWORD': '',   #密码
-        # 'HOST': '',         #本地地址，不是远程操作无需填写地址
-        # 'PORT': '3306', #端口号，默认为3306
+        'OPTIONS': {'charset': 'utf8mb4', },
+        'ENGINE': 'django.db.backends.mysql',  #更改为mysql
+        'NAME': 'evaluation',  #数据库名
+        'USER': 'root',      #数据库的用户名
+        'PASSWORD': '123456',   #密码
+        'HOST': '127.0.0.1',    #本地地址，不是远程操作无需填写地址
+        'PORT': '3336', #端口号
     }
 }
 

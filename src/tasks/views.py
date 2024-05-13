@@ -6,8 +6,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from ME.settings import EVALUATE_IP_PORT, MEDIA_ROOT
 from datasets.models import Dataset
-from .models import Metric, ModelInstance, InstanceMetricPerspectiveRelationship, Parameter
-from cv_models.models import Architecture, Task, Environment, Perspective, Aspect
+from .models import Metric, ModelInstance, InstanceMetricPerspectiveRelationship
+from cv_models.models import Architecture, Task, Environment, Perspective, Aspect, Parameter
 import requests
 import os
 
@@ -105,7 +105,7 @@ class Evaluation(APIView):
                 name_perspective_metric['metrics'].append({'metric_name': metric.name, 'metric_score': 0})
             name_perspectives_metrics.append(name_perspective_metric)
             model_path = instance.architecture.model_path
-            dataset_path = instance.dataset.file.name
+            dataset_path = instance.dataset.path
             dataset_principal = instance.dataset.principal
             parameter_path = instance.parameter.file.name
             message = {'task_name': instance.task.name, 'perspective_metric': name_perspectives_metrics,

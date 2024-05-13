@@ -1,14 +1,4 @@
 django~=4.2.3
 djangorestframework~=3.14.0
 djangorestframework-simplejwt~=5.3.0
-requests
-ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
-conda-repo-cli 1.0.75 requires c, which is not installed.
-anaconda-client 1.12.1 requires requests>=2.20.0, but you have requests 2.7.0 which is incompatible.
-conda 23.7.4 requires requests<3,>=2.27.0, but you have requests 2.7.0 which is incompatible.
-conda-repo-cli 1.0.75 requires clyent==1.2.1, but you have clyent 1.2.2 which is incompatible.
-conda-repo-cli 1.0.75 requires PyYAML==6.0.1, but you have pyyaml 6.0 which is incompatible.
-conda-repo-cli 1.0.75 requires requests==2.31.0, but you have requests 2.7.0 which is incompatible.
-cookiecutter 1.7.3 requires requests>=2.23.0, but you have requests 2.7.0 which is incompatible.
-datasets 2.12.0 requires requests>=2.19.0, but you have requests 2.7.0 which is incompatible.
-jupyterlab-server 2.22.0 requires requests>=2.28, but you have requests 2.7.0 which is incompatible.
+pymysql~=1.1.0

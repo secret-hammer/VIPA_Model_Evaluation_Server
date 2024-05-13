@@ -7,8 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Architecture, TaskArchitectureRelationship, Task, Environment, MetricPerspectiveTaskRelationship, \
-    Perspective
+from .models import Architecture, Task, Environment, Perspective, Parameter
 
 
 # 上传模型视图
@@ -32,8 +31,11 @@ class upload_architecture(APIView):
         task_id = request.POST.get('task_id')
         try:
             task = Task.objects.get(id=task_id)
+            architecture.task = task
         except:
             return Response({'message': 'Invalid task id'}, status=400)
+        
+        
         try:
             with zipfile.ZipFile(zip_file, 'r') as zipobj:
                 for file_info in zipobj.infolist():
@@ -48,44 +50,20 @@ class upload_architecture(APIView):
         architecture.file = zip_file
         architecture.save()
         architecture.file_save()
-        relationship = TaskArchitectureRelationship(task=task, architecture=architecture)
-        relationship.save()
         return Response({'architecture_id': f'{architecture.id}'}, status=201)
-
-
-# 上传参数视图
 
 
 # 查询模型视图
 class ArchitectureView(APIView):
-    def fillResponse(self, response, architectures):
-        for architecture in architectures:
-            relationships = TaskArchitectureRelationship.objects.filter(architecture=architecture)
-            tasks = []
-            for relationship in relationships:
-                tasks.append(relationship.task.name)
-            response.append({
-                'model': architecture.name,
-                'id': architecture.id,
-                'description': architecture.description,
-                'user': architecture.user.username,
-                'paper_link': architecture.paper_link,
-                'code_link': architecture.code_link,
-                'update': architecture.update_time,
-                'upload': architecture.upload_time,
-                'task': tasks,
-            })
-
-    permission_classes = (IsAuthenticated,)
-
     def get(self, request):
-        public_architectures = Architecture.objects.filter(is_public=True)
-        response = []
-        self.fillResponse(response, public_architectures)
-        if request.user.is_authenticated:
-            private_architectures = Architecture.objects.filter(user=request.user, is_public=False)
-            self.fillResponse(response, private_architectures)
-        return Response(response)
+        task_id = request.GET.get('task_id')
+        
+        architectures = Architecture.objects.filter(Q(user=request.user) | Q(is_public=True)) if request.user.is_authenticated else Dataset.objects.filter(is_public=True)
+        
+        if task_id is not None:
+            architectures = architectures.filter(task_id=task_id)
+            
+        return Response([arch.to_dict() for arch in architectures.distinct()])
 
 
 class ArchitectureCheck(APIView):
@@ -100,56 +78,41 @@ class ArchitectureCheck(APIView):
         response = {"model_name": architecture.name, "description": architecture.description}
         return Response(response, status=200)
 
-
-class MetricView(APIView):
-    permission_classes = (IsAuthenticated,)
-
+# 查询模型权重
+class ParameterView(APIView):
     def get(self, request):
-        try:
-            task = Task.objects.get(id=request.GET.get("task_id"))
-        except:
-            return Response({'message': 'wrong task_id'}, status=400)
-        task_relationship = MetricPerspectiveTaskRelationship.objects.filter(task=task)
-        if not task_relationship:
-            return Response({'message': 'Invalid task id'}, status=400)
-
-        default_metrics = {}
-        selected_metrics = {}
-        for relationship in task_relationship:
-            perspective = relationship.perspective
-            perspective_name = perspective.name
-            perspective_id = perspective.id
-            metric_name = relationship.metric.name
-            metric_id = relationship.metric.id
-            is_default = relationship.is_default
-            if is_default:
-                if perspective_name not in default_metrics:
-                    default_metrics[perspective_name] = {'perspective_name': perspective_name,
-                                                         'perspective_id': perspective_id,
-                                                         'metrics': [
-                                                             {'metric_name': metric_name, 'metric_id': metric_id}]}
-                else:
-                    default_metrics[perspective_name]['metrics'].append(
-                        {'metric_name': metric_name, 'metric_id': metric_id})
-            else:
-                print(perspective_name)
-                if perspective_name not in selected_metrics:
-                    selected_metrics[perspective_name] = {'perspective_name': perspective_name,
-                                                          'perspective_id': perspective_id,
-                                                          'metrics': [
-                                                              {'metric_name': metric_name, 'metric_id': metric_id}]}
-                else:
-                    selected_metrics[perspective_name]['metrics'].append(
-                        [{'metric_name': metric_name, 'metric_id': metric_id}])
-
-        response = {"default_metrics": list(default_metrics.values()),
-                    "selected_metrics": list(selected_metrics.values())}
-        return Response(response, status=200)
+        architecture_id = request.GET.get('architecture_id')
+        
+        parameters = Parameter.objects.filter(Q(user=request.user) | Q(is_public=True)) if request.user.is_authenticated else Parameter.objects.filter(is_public=True)
+        
+        if architecture_id is not None:
+            parameters = parameters.filter(architecture_id=architecture_id)
+            
+        return Response([para.to_dict() for para in parameters.distinct()])
+        
+        
+# 查询可用评估指标
+class MetricView(APIView):
+    def get(self, request):
+        task_id = request.GET.get('task_id')
+        aspect_id = request.GET.get('aspect_id')
+        perspective_id = request.GET.get('perspective_id')
+        
+        metrics = Metric.objects.all()
+        
+        if task_id is not None:
+            metrics = metrics.filter(task_id=task_id)
+        
+        if aspect is not None:
+            metrics = metrics.filter(aspect_id=aspect_id)
+            
+        if perspective_id is not None:
+            metrics = metrics.filter(perspective_id=perspective_id)
+            
+        return Response([metric.to_dict() for metric in metrics])
 
 
 class TaskView(APIView):
-    permission_classes = (IsAuthenticated,)
-
     def get(self, request):
         tasks = Task.objects.all()
         response = []
