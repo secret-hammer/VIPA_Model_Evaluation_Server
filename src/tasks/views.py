@@ -61,18 +61,18 @@ class ResultView(APIView):
                                  'model_instance_id': instance.id})
         return Response(response, status=200)
 
-
+# 启动评估任务
 class Evaluation(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        environment_id = request.data.get('environment_id')
-        architecture_id = request.data.get('model_arch_id')
+        architecture_id = request.data.get('architecture_id')
         task_id = request.data.get('task_id')
         dataset_id = request.data.get('dataset_id')
-        perspectives_metrics = request.data.get('perspectives_metrics')
+        metric_ids = request.data.get('metric_ids')
         aspect_id = request.data.get('aspect_id')
         parameter_id = request.data.get('parameter_id')
+        environment_id = request.data.get('environment_id')
         try:
             architecture = Architecture.objects.get(id=architecture_id)
             task = Task.objects.get(id=task_id)
@@ -84,99 +84,106 @@ class Evaluation(APIView):
             return Response({
                 'message': f'Invalid arch{architecture_id}/task{task_id}/dataset{dataset_id}/environment{environment_id}/aspect{aspect_id}/parameter id{parameter_id}'},
                 status=400)
+        
+        # 初始化条件为0，表示当前任务没有开始
         instance = ModelInstance(user=request.user, architecture=architecture, task=task, dataset=dataset,
-                                 environment=environment, aspect=aspect, parameter=parameter)
+                                 environment=environment, aspect=aspect, parameter=parameter, condition=0)
         instance.save()
-        name_perspectives_metrics = []
-        for perspective_metric in perspectives_metrics:
+        
+        # 构建任务实例和评估指标的关系
+        metric_id_names = []
+        for metric_id in metric_ids:
             try:
-                perspective = Perspective.objects.get(id=perspective_metric['perspective_id'])
-            except:
-                return Response({'message': f'{perspective_metric}perspective_metric'}, status=400)
-            name_perspective_metric = {'perspective_name': perspective.name, 'metrics': []}
-            for metric_id in perspective_metric['metrics_ids']:
-                try:
-                    metric = Metric.objects.get(id=metric_id)
-                except:
-                    return Response({'message': f'{metric_id}metric_id'}, status=400)
-                relationship = InstanceMetricPerspectiveRelationship(instance=instance, metric=metric,
-                                                                     perspective=perspective)
+                metric = Metric.objects.get(id=metric_id)
+                assert metric.aspect == aspect and metric.task == task
+                
+                metric_id_names.append({'id': metric.id, 'name': metric.name})
+                
+                relationship = InstanceMetricPerspectiveRelationship(instance=instance, metric=metric, perspective_id=metric.perspective_id)
                 relationship.save()
-                name_perspective_metric['metrics'].append({'metric_name': metric.name, 'metric_score': 0})
-            name_perspectives_metrics.append(name_perspective_metric)
-            model_path = instance.architecture.model_path
-            dataset_path = instance.dataset.path
-            dataset_principal = instance.dataset.principal
-            parameter_path = instance.parameter.file.name
-            message = {'task_name': instance.task.name, 'perspective_metric': name_perspectives_metrics,
-                       'model_path': model_path,
-                       'parameter': parameter_path,
-                       'dataset_path': dataset_path,
-                       'dataset_principal': dataset_principal,
-                       'instance_id': instance.id}
-        response = requests.post(url="http://127.0.0.1:3308/start/", json=message)
+            except Exception as e:
+                return Response({'message': f'{str(e)}'}, status=400)
+                
+        model_name = instance.architecture.name
+        dataset_name = instance.dataset.name
+        checkpoint_path = instance.parameter.path
+        task_name = instance.task.name
+        task_type = instance.task.id
+        environment = instance.environment.name
+        aspect = instance.aspect.name
+        task_modelinstance_id = instance.id
+        
+        json_kwargs = {
+            model_name: model_name,
+            dataset_name: dataset_name,
+            checkpoint_path: checkpoint_path,
+            task_name: task_name,
+            task_type: task_type,
+            environment: environment,
+            aspect: aspect,
+            metrics: metric_id_names,
+            task_modelinstance_id: task_modelinstance_id
+        }
+        
+        # 发起任务请求
+        response = requests.post(url="http://10.214.242.156:5002/api/task/add", json=json_kwargs)
+        
         if response.status_code == 200:
-            return Response({'instance_id': instance.id}, status=200)
+            return Response({'message': 'Evaluation task successfully start  ' + json.dumps(json_kwargs)}, status=200)
         else:
-            return Response({'message': f'Evaluation fail to start{parameter_path}'}, status=400)
+            return Response({'message': 'Evaluation fail to start'}, status=400)
 
 
+# 
 class EvaluationProcess(APIView):
-    # permission_classes = (IsAuthenticated,)
-
     def post(self, request):
         instance_id = int(request.data['instance_id'])
         condition = int(request.data['condition'])
+        
         try:
             instance = ModelInstance.objects.get(id=instance_id)
         except:
             return Response({'message': f'wrong {instance_id}'}, status=401)
 
+
         instance.condition = condition
-        if condition == 1:
-            fault_info = request.POST.get('fault_info')
-            instance.fault_info = fault_info
-            response = {'process': f'{-1}'}
+        if condition == 0:
+            # 清空process和score
+            instance.process = 0
+            instance.scores = ''
+            response = {'message': 'Set evaluation task to waiting state'}
+        elif condition == 1:
+            response = {'message': 'Set evaluation task to processing state'} 
         elif condition == 2:
-            instance.process = 100
-            perspectives_metrics = json.loads(request.data['perspectives_metrics'])
-            instance.scores = str(perspectives_metrics)
-            for perspective_metrics in perspectives_metrics:
+            instance.process = 1
+            metric_scores = request.data.get('metric_scores')
+            for metric_score in metric_scores:
+                metric_id = metric_score['metric_id']
+                metric_name = metric.score['metric_name']
+                score = metric_score['score']
                 try:
-                    perspective = get_object_or_404(Perspective, name=perspective_metrics['perspective_name'])
-                    metrics = perspective_metrics['metrics']
+                    metric = Metric.objects.get(id=metric_id)
+                    assert metric.name == metric_name
+                except Exception as e:
+                    return Response({'message': str(e)}, status=400)
+                
+                try:
+                    relationship = InstanceMetricPerspectiveRelationship.objects.get(instance=instance, metric_id=metric_id)
                 except:
                     continue
-                for metric_all in metrics:
-                    metric_value = metric_all['metric_score']
-                    metric_name = metric_all['metric_name']
-                    try:
-                        metric = Metric.objects.get(name=metric_name)
-                    except:
-                        print('metric here')
-                        return Response({'message': f'wrong metric{metric_all}'}, status=400)
-                    try:
-                        relationship = InstanceMetricPerspectiveRelationship.objects.get(instance=instance,
-                                                                                         metric=metric,
-                                                                                         perspective=perspective)
-                    except:
-                        continue
-
-                    if not metric_value:
-                        print(metrics)
-                    if relationship:
-                        relationship.score = metric_value
-                        relationship.save()
-            response = {'process': f'{100}'}
-        elif condition == 0:
-            response = {'process': f'{0}'}
+                relationship.score = score
+                relationship.save()
+            
         elif condition == 3:
-            progress = request.POST.get('progress')
-            instance.process = progress
-            response = {'process': f'{progress}'}
+            fault_info = request.POST.get('fault_info')
+            instance.fault_info = fault_info
+            instance.process = 1
+            response = {'message': 'Set evaluation task to fault state'}
+        
         else:
-            return Response({'message': 'wrong condition'}, status=400)
-        instance.save()
+            return Response({'message': 'unknown condition'}, status=400)
+        
+        instance.save()        
         return Response(response, status=200)
 
 
@@ -196,7 +203,7 @@ class ParameterUpload(APIView):
 
 class InstanceCondition(APIView):
     permission_classes = (IsAuthenticated,)
-
+                 
     def get(self, request):
         instance_id = request.GET.get('instance_id')
         try:

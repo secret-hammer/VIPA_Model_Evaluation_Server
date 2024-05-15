@@ -35,7 +35,7 @@ class ModelInstance(models.Model):
     upload_time = models.DateTimeField(auto_now_add=True)
     update_time = models.DateTimeField(auto_now=True)
     condition = models.IntegerField(default=0)
-    process = models.IntegerField(null=True, blank=True)
+    process = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return str(self.id) + ' ' + str(self.condition)

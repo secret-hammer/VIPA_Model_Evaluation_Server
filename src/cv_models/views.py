@@ -7,11 +7,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Architecture, Task, Environment, Perspective, Parameter
+from .models import Architecture, Task, Environment, Perspective, Parameter, Metric
 
 
 # 上传模型视图
-
 
 class upload_architecture(APIView):
     permission_classes = (IsAuthenticated,)
@@ -103,7 +102,7 @@ class MetricView(APIView):
         if task_id is not None:
             metrics = metrics.filter(task_id=task_id)
         
-        if aspect is not None:
+        if aspect_id is not None:
             metrics = metrics.filter(aspect_id=aspect_id)
             
         if perspective_id is not None:
