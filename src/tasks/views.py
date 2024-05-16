@@ -20,45 +20,68 @@ class ResultView(APIView):
 
     def post(self, request):
         user = request.user
+        instance_id = request.data.get('instance_id')
         dataset_id = request.data.get('dataset_id')
         task_id = request.data.get('task_id')
-        aspects_ids = request.data.get('aspects_ids')
+        aspect_id = request.data.get('aspect_id')
+        architecture_id = request.data.get('architecture_id')
+        parameter_id = request.data.get('parameter_id')
+        condition = request.data.get('condition')
+        
         try:
             instances = ModelInstance.objects.filter(user=user)
-            if task_id:
-                instances = instances.objects.filter(task_id=task_id)
+            if instance_id:
+                instances = instances.objects.filter(id=instance_id)
             if dataset_id:
                 instances = instances.objects.filter(dataset_id=dataset_id)
-        except:
-            return Response({'message': f"{dataset_id, task_id}No instance find"}, status=400)
+            if task_id:
+                instances = instances.objects.filter(task_id=task_id)
+            if aspect_id:
+                instances = instances.objects.filter(aspect_id=aspect_id)
+            if architecture_id:
+                instances = instances.objects.filter(architecture_id=architecture_id)
+            if parameter_id:
+                instances = instances.objects.filter(parameter_id=parameter_id)
+            if condition:
+                instances = instances.objects.filter(condition=condition)
+        except Exception as e:
+            return Response({'message': str(e)}, status=400)
         response = []
 
         for instance in instances:
-            if aspects_ids and aspects_ids != []:
-                instances = instances.objects.filter(aspect__id__in=aspects_ids)
-
-            # return Response({f'{instances}'})
-            evaluate_score = {}
-            if instance.condition == 2:
+            instance_response = {
+                'instance_id' : instance.id,
+                'architecture_name' : instance.architecture.name,
+                'paper_link' : instance.architecture.paper_link,
+                'code_link' : instance.architecture.code_link,
+                'user_name' : instance.user.username,
+                'task_name' : instance.task.name,
+                'aspect_name' : instance.aspect.name,
+                'dataset_name' : instance.dataset.name,
+                'parameter_name' : instance.parameter.name,
+                'environment_name' : instance.environment.name,
+                'condition' : instance.condition
+            }
+            if instance.condition == 1:
+                instance_response['process'] = instance.process
+            elif instance.condition == 2:
                 relationships = InstanceMetricPerspectiveRelationship.objects.filter(instance=instance)
+                evaluate_score = {}
                 for relationship in relationships:
                     metric = relationship.metric
                     score = relationship.score
                     scores = {'metric_name': metric.name, 'metric_score': score}
                     perspective = relationship.perspective
                     perspective_name = perspective.name
-                    if perspective_name not in evaluate_score:
-                        evaluate_score[perspective_name] = {'perspective_name': perspective_name,
-                                                            'metric_names': [scores]}
+                    if perspective_name not in evaluate_score.keys():
+                        evaluate_score[perspective_name] = {'perspective_name': perspective_name, 'metrics': [scores]}
                     else:
-                        evaluate_score[perspective_name]['metric_names'].append(scores)
-                response.append({'model_architecture_name': instance.architecture.name,
-                                 'evaluate_score': list(evaluate_score.values()),
-                                 'parameter_size': 1,
-                                 'user_name': instance.user.username,
-                                 'paper_link': instance.architecture.paper_link,
-                                 'code_link': instance.architecture.code_link,
-                                 'model_instance_id': instance.id})
+                        evaluate_score[perspective_name]['metrics'].append(scores)
+                instance_response['evaluate_score'] = list(evaluate_score.values())
+            elif instance.condition == 3:
+                instance_response['fault_info'] = instance.fault_info
+            response.append(instance_response)    
+            
         return Response(response, status=200)
 
 # 启动评估任务
@@ -134,7 +157,7 @@ class Evaluation(APIView):
             return Response({'message': 'Evaluation fail to start'}, status=400)
 
 
-# 
+# 内部同步接口
 class EvaluationProcess(APIView):
     def post(self, request):
         instance_id = int(request.data['instance_id'])
