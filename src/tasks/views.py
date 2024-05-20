@@ -31,19 +31,19 @@ class ResultView(APIView):
         try:
             instances = ModelInstance.objects.filter(user=user)
             if instance_id:
-                instances = instances.objects.filter(id=instance_id)
+                instances = instances.filter(id=instance_id)
             if dataset_id:
-                instances = instances.objects.filter(dataset_id=dataset_id)
+                instances = instances.filter(dataset_id=dataset_id)
             if task_id:
-                instances = instances.objects.filter(task_id=task_id)
+                instances = instances.filter(task_id=task_id)
             if aspect_id:
-                instances = instances.objects.filter(aspect_id=aspect_id)
+                instances = instances.filter(aspect_id=aspect_id)
             if architecture_id:
-                instances = instances.objects.filter(architecture_id=architecture_id)
+                instances = instances.filter(architecture_id=architecture_id)
             if parameter_id:
-                instances = instances.objects.filter(parameter_id=parameter_id)
+                instances = instances.filter(parameter_id=parameter_id)
             if condition:
-                instances = instances.objects.filter(condition=condition)
+                instances = instances.filter(condition=condition)
         except Exception as e:
             return Response({'message': str(e)}, status=400)
         response = []
