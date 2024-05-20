@@ -5,8 +5,8 @@ class Command(BaseCommand):
     help = 'Insert data into Perspective'
 
     def handle(self, *args, **options):
-        aspect_id = 4
-        name = 'Structural Similarity'
+        aspect_id = 1
+        name = 'Accuracy'
         
         perspective = Perspective(name=name, aspect_id=aspect_id)
         

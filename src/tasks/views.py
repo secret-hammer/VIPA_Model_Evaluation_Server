@@ -105,7 +105,7 @@ class Evaluation(APIView):
             parameter = Parameter.objects.get(id=parameter_id)
         except:
             return Response({
-                'message': f'Invalid arch{architecture_id}/task{task_id}/dataset{dataset_id}/environment{environment_id}/aspect{aspect_id}/parameter id{parameter_id}'},
+                'message': f'Invalid arch {architecture_id}/task {task_id}/dataset {dataset_id}/environment {environment_id}/aspect {aspect_id}/parameter id{parameter_id}'},
                 status=400)
         
         # 初始化条件为0，表示当前任务没有开始
@@ -137,15 +137,15 @@ class Evaluation(APIView):
         task_modelinstance_id = instance.id
         
         json_kwargs = {
-            model_name: model_name,
-            dataset_name: dataset_name,
-            checkpoint_path: checkpoint_path,
-            task_name: task_name,
-            task_type: task_type,
-            environment: environment,
-            aspect: aspect,
-            metrics: metric_id_names,
-            task_modelinstance_id: task_modelinstance_id
+            "model_name": model_name,
+            "dataset_name": dataset_name,
+            "checkpoint_path": checkpoint_path,
+            "task_name": task_name,
+            "task_type": task_type,
+            "environment": environment,
+            "aspect": aspect,
+            "metrics": metric_id_names,
+            "task_modelinstance_id": task_modelinstance_id
         }
         
         # 发起任务请求
@@ -170,43 +170,47 @@ class EvaluationProcess(APIView):
 
 
         instance.condition = condition
-        if condition == 0:
-            # 清空process和score
-            instance.process = 0
-            instance.scores = ''
-            response = {'message': 'Set evaluation task to waiting state'}
-        elif condition == 1:
-            response = {'message': 'Set evaluation task to processing state'} 
-        elif condition == 2:
-            instance.process = 1
-            metric_scores = request.data.get('metric_scores')
-            for metric_score in metric_scores:
-                metric_id = metric_score['metric_id']
-                metric_name = metric.score['metric_name']
-                score = metric_score['score']
-                try:
-                    metric = Metric.objects.get(id=metric_id)
-                    assert metric.name == metric_name
-                except Exception as e:
-                    return Response({'message': str(e)}, status=400)
+        response = {}
+        try: 
+            if condition == 0:
+                # 清空process和score
+                instance.process = 0
+                instance.scores = ''
+                response = {'message': 'Set evaluation task to waiting state'}
+            elif condition == 1:
+                response = {'message': 'Set evaluation task to processing state'} 
+            elif condition == 2:
+                instance.process = 1
+                metric_scores = request.data.get('metric_scores')
+                print(metric_scores)
+                for metric_score in metric_scores:
+                    metric_id = metric_score['metric_id']
+                    score = metric_score['score']
+                    try:
+                        metric = Metric.objects.get(id=metric_id)
+                    except Exception as e:
+                        return Response({'message': str(e)}, status=400)
+                    
+                    try:
+                        relationship = InstanceMetricPerspectiveRelationship.objects.get(instance=instance, metric_id=metric_id)
+                    except:
+                        continue
+                    relationship.score = score
+                    relationship.save()
                 
-                try:
-                    relationship = InstanceMetricPerspectiveRelationship.objects.get(instance=instance, metric_id=metric_id)
-                except:
-                    continue
-                relationship.score = score
-                relationship.save()
+            elif condition == 3:
+                fault_info = request.POST.get('fault_info')
+                instance.fault_info = fault_info
+                instance.process = 1
+                response = {'message': 'Set evaluation task to fault state'}
             
-        elif condition == 3:
-            fault_info = request.POST.get('fault_info')
-            instance.fault_info = fault_info
-            instance.process = 1
-            response = {'message': 'Set evaluation task to fault state'}
+            else:
+                return Response({'message': 'unknown condition'}, status=400)
+            
+            instance.save()        
+        except Exception as e:
+            return Response({'message': str(e)}, status=400)
         
-        else:
-            return Response({'message': 'unknown condition'}, status=400)
-        
-        instance.save()        
         return Response(response, status=200)
 
 
