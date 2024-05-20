@@ -152,7 +152,7 @@ class Evaluation(APIView):
         response = requests.post(url="http://10.214.242.156:5002/api/task/add", json=json_kwargs)
         
         if response.status_code == 200:
-            return Response({'message': 'Evaluation task successfully start  ' + json.dumps(json_kwargs)}, status=200)
+            return Response({'instance_id': instance.id, 'message': 'Evaluation task successfully start  ' + json.dumps(json_kwargs)}, status=200)
         else:
             return Response({'message': 'Evaluation fail to start'}, status=400)
 
