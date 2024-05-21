@@ -29,7 +29,7 @@ class ModelInstance(models.Model):
     environment = models.ForeignKey(Environment, on_delete=models.CASCADE)
     aspect = models.ForeignKey(Aspect, on_delete=models.CASCADE)
     parameter = models.ForeignKey(Parameter, on_delete=models.CASCADE, null=True, blank=True)
-    fault_info = models.CharField(max_length=255, null=True, blank=True)
+    fault_info = models.TextField(null=True, blank=True)
     scores = models.CharField(max_length=255, null=True, blank=True, default='')
 
     upload_time = models.DateTimeField(auto_now_add=True)
