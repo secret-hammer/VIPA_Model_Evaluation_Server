@@ -83,6 +83,7 @@ class Parameter(models.Model):
     architecture = models.ForeignKey(Architecture, on_delete=models.CASCADE)
     # Fields
     name = models.CharField(max_length=200, blank=True, null=True)
+    train_dataset_name = models.CharField(max_length=200, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     path = models.CharField(max_length=255, null=False)
     upload_time = models.DateTimeField(auto_now_add=True, null=True)
@@ -95,6 +96,7 @@ class Parameter(models.Model):
         return {
             'id': self.id,
             'name': self.name,
+            'train_dataset_name' : self.train_dataset_name,
             'description': self.description,
             'path': self.path,
             'upload_time': self.upload_time,
