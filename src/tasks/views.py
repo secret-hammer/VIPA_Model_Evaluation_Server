@@ -199,7 +199,7 @@ class EvaluationProcess(APIView):
                     relationship.save()
                 
             elif condition == 3:
-                fault_info = request.POST.get('fault_info')
+                fault_info = request.data.get('fault_info')
                 instance.fault_info = fault_info
                 instance.process = 1
                 response = {'message': 'Set evaluation task to fault state'}
